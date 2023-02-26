@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebAssembly Demo</title>
+</head>
+<body>
+  <h1>WebAssembly Demo</h1>
+
+  <script>
+
+    // Initialise WASM memory
+    // 2 * 60kb = 120kb
+    const wasmMemory = new WebAssembly.Memory({
+      initial: 2
+    });
+
+    const readMemoryString = (offset, length) => {
+      const strBuffer = new Uint8Array(wasm.instance.exports.memory.buffer, offset, length);
+      const str = new TextDecoder().decode(strBuffer);
+      
+      window.dispatchEvent(new CustomEvent('wasmValue', {detail: str}))
+    }
+
+    window.addEventListener('wasmValue', str => {
+      console.log("Received a new string", str.detail);
+    });
+
+    const imports = {
+      env: {
+        numLog: console.log,
+        stringLog: readMemoryString,
+        memory: wasmMemory
+      }
+    }
+
+    // Load WASM
+    WebAssembly.instantiateStreaming(fetch('/program.wasm'), imports).then(wasm => {
+      console.log('wasm ready!');
+
+      window.wasm = wasm;
+
+      console.log(WebAssembly.Module.exports(wasm.module));
+      console.log(WebAssembly.Module.imports(wasm.module));
+
+      wasm.instance.exports.getDoubleNumber(80);
+      wasm.instance.exports.greet();
+
+    })
+  </script>
+</body>
+</html>
